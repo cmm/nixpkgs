@@ -52,6 +52,7 @@ stdenv.mkDerivation (finalAttrs: {
       dbusLaunch = "${dbus.lib}/bin/dbus-launch";
       bash = "${bash}/bin/bash";
     })
+    ./xdg-session-type.patch
   ];
 
   nativeBuildInputs = [
