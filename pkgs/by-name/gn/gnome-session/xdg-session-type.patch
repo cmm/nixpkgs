@@ -1,0 +1,6 @@
+diff -rU0 gnome-session-3.36.0/gnome-session/gnome-session.in gnome-session-3.36.0.patched/gnome-session/gnome-session.in
+--- gnome-session-3.36.0/gnome-session/gnome-session.in	2020-03-08 22:04:15.000000000 +0200
++++ gnome-session-3.36.0.patched/gnome-session/gnome-session.in	2021-04-20 00:53:05.750600504 +0300
+@@ -3,1 +3,1 @@
+-if [ "x$XDG_SESSION_TYPE" = "xwayland" ] &&
++if ([ "x$XDG_SESSION_TYPE" = "xwayland" ] || [ "x$XDG_SESSION_TYPE" = "xx11" ]) &&
