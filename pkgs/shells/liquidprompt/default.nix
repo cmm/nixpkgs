@@ -12,6 +12,8 @@ stdenv.mkDerivation rec {
   };
 
   strictDeps = true;
+  patches = [ ./sane-window-title.patch ];
+
   installPhase = ''
     install -D -m 0444 liquidprompt $out/bin/liquidprompt
     install -D -m 0444 liquidpromptrc-dist $out/share/doc/liquidprompt/liquidpromptrc-dist
