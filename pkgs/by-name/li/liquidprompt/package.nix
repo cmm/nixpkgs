@@ -21,6 +21,7 @@ stdenv.mkDerivation rec {
   postPatch = ''
     patchShebangs tools/*.sh
   '';
+  patches = [ ./sane-window-title.patch ];
 
   installPhase = ''
     runHook preInstall
