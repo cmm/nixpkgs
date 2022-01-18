@@ -1,0 +1,19 @@
+commit f3f960f83e344fb45c36c7bd9481e38912866903
+Author: Michael Livshin <repo@cmm.kakpryg.net>
+Date:   Wed Mar 31 16:41:12 2021 +0300
+
+    saner window title
+
+diff --git a/liquidprompt b/liquidprompt
+index bd211d8..0fcc8de 100755
+--- a/liquidprompt
++++ b/liquidprompt
+@@ -3404,7 +3404,7 @@ _lp_default_theme_prompt_template() {
+         PS1+="${LP_RUNTIME}${LP_ERR}${LP_MARK_PREFIX}${LP_COLOR_MARK}${LP_MARK}${LP_PS1_POSTFIX}"
+ 
+         # Get the core sections without prompt escapes and make them into a title.
+-        _lp_formatted_title "${LP_PS1_PREFIX}${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_MARK_PERM}${lp_path-}${LP_BRACKET_CLOSE}${LP_MARK_PREFIX}${LP_MARK}${LP_PS1_POSTFIX}"
++        _lp_formatted_title "${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_MARK_PERM}${lp_path-}${LP_BRACKET_CLOSE}${LP_MARK_PREFIX}${LP_MARK}"
+     else
+         PS1=$LP_PS1
+     fi
