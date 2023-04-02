@@ -2,13 +2,13 @@
 
 stdenv.mkDerivation rec {
   pname = "deadbeef-headerbar-gtk3-plugin";
-  version = "1.2";
+  version = "unstable-2021-12-16";
 
   src = fetchFromGitHub {
     owner = "saivert";
     repo = "ddb_misc_headerbar_GTK3";
-    rev = "v${version}";
-    sha256 = "1v1schvnps7ypjqgcbqi74a45w8r2gbhrawz7filym22h1qr9wn0";
+    rev = "a264cb4246c2958e6aadab06d9f7983ef56979ad";
+    hash = "sha256-hCb7ktyhat5ge33wWrIgfdy2Jk+2+0S8R4Wu6x340fY=";
   };
 
   nativeBuildInputs = [ autoconf automake libtool pkg-config libxml2 ];
