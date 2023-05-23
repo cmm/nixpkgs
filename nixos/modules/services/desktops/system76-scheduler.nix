@@ -4,7 +4,7 @@ let
   cfg = config.services.system76-scheduler;
 
   inherit (builtins) concatStringsSep map toString attrNames;
-  inherit (lib) boolToString types mkOption literalExpression optional mkIf mkMerge;
+  inherit (lib) boolToString types mkOption literalExpression optional mkIf;
   inherit (types) nullOr listOf bool int ints float str enum;
 
   withDefaults = optionSpecs: defaults:
@@ -226,7 +226,44 @@ in {
     };
   };
 
-  config = mkIf cfg.enable {
+  config = mkIf cfg.enable (let
+    etc = if cfg.useStockConfig then {
+      # No custom settings: just use stock configuration with a fix for Pipewire
+      "system76-scheduler/config.kdl".source = "${cfg.package}/data/config.kdl";
+      "system76-scheduler/process-scheduler/00-dist.kdl".source = "${cfg.package}/data/pop_os.kdl";
+      "system76-scheduler/process-scheduler/01-fix-pipewire-paths.kdl".source = ../../../../pkgs/os-specific/linux/system76-scheduler/01-fix-pipewire-paths.kdl;
+    } else (let
+      settings = cfg.settings;
+      cfsp = settings.cfsProfiles;
+      ps = settings.processScheduler;
+    in {
+      "system76-scheduler/config.kdl".source = pkgs.writeText "config.kdl" ''
+        version "2.0"
+        autogroup-enabled false
+        cfs-profiles enable=${boolToString cfsp.enable} {
+          ${cfsProfileToString "default"}
+          ${cfsProfileToString "responsive"}
+        }
+        process-scheduler enable=${boolToString ps.enable} {
+          execsnoop ${boolToString ps.useExecsnoop}
+          refresh-rate ${toString ps.refreshInterval}
+          assignments {
+            ${if ps.foregroundBoost.enable then (schedulerProfileToString "foreground" ps.foregroundBoost.foreground "") else ""}
+            ${if ps.foregroundBoost.enable then (schedulerProfileToString "background" ps.foregroundBoost.background "") else ""}
+            ${if ps.pipewireBoost.enable then (schedulerProfileToString "pipewire" ps.pipewireBoost.profile "") else ""}
+          }
+        }
+      '';
+    })
+    // {
+      "system76-scheduler/process-scheduler/02-config.kdl".source = pkgs.writeText "02-config.kdl"
+        ("exceptions {\n${concatStringsSep "\n" (map (e: "  ${e}") cfg.exceptions)}\n}\n"
+         + "assignments {\n"
+         + (concatStringsSep "\n" (map (name: schedulerProfileToString name cfg.assignments.${name} "  ")
+           (attrNames cfg.assignments)))
+         + "\n}\n");
+    };
+  in {
     environment.systemPackages = [ cfg.package ];
     services.dbus.packages = [ cfg.package ];
 
@@ -245,50 +282,14 @@ in {
         ExecStart = "${cfg.package}/bin/system76-scheduler daemon";
         ExecReload = "${cfg.package}/bin/system76-scheduler daemon reload";
       };
+      # should ideally use reloadTriggers instead, but reloading is
+      # not enough to cause the right thing to happen when a
+      # "submodule" is toggled (Pipewire boosting or exesnoop)
+      restartTriggers = map (e: e.source) (builtins.attrValues etc);
     };
 
-    environment.etc = mkMerge [
-      (mkIf cfg.useStockConfig {
-        # No custom settings: just use stock configuration with a fix for Pipewire
-        "system76-scheduler/config.kdl".source = "${cfg.package}/data/config.kdl";
-        "system76-scheduler/process-scheduler/00-dist.kdl".source = "${cfg.package}/data/pop_os.kdl";
-        "system76-scheduler/process-scheduler/01-fix-pipewire-paths.kdl".source = ../../../../pkgs/os-specific/linux/system76-scheduler/01-fix-pipewire-paths.kdl;
-      })
-
-      (let
-        settings = cfg.settings;
-        cfsp = settings.cfsProfiles;
-        ps = settings.processScheduler;
-      in mkIf (!cfg.useStockConfig) {
-        "system76-scheduler/config.kdl".text = ''
-          version "2.0"
-          autogroup-enabled false
-          cfs-profiles enable=${boolToString cfsp.enable} {
-            ${cfsProfileToString "default"}
-            ${cfsProfileToString "responsive"}
-          }
-          process-scheduler enable=${boolToString ps.enable} {
-            execsnoop ${boolToString ps.useExecsnoop}
-            refresh-rate ${toString ps.refreshInterval}
-            assignments {
-              ${if ps.foregroundBoost.enable then (schedulerProfileToString "foreground" ps.foregroundBoost.foreground "    ") else ""}
-              ${if ps.foregroundBoost.enable then (schedulerProfileToString "background" ps.foregroundBoost.background "    ") else ""}
-              ${if ps.pipewireBoost.enable then (schedulerProfileToString "pipewire" ps.pipewireBoost.profile "    ") else ""}
-            }
-          }
-        '';
-      })
-
-      {
-        "system76-scheduler/process-scheduler/02-config.kdl".text =
-          "exceptions {\n${concatStringsSep "\n" (map (e: "  ${e}") cfg.exceptions)}\n}\n"
-          + "assignments {\n"
-          + (concatStringsSep "\n" (map (name: schedulerProfileToString name cfg.assignments.${name} "  ")
-            (attrNames cfg.assignments)))
-          + "\n}\n";
-      }
-    ];
-  };
+    environment.etc = etc;
+  });
 
   meta = {
     maintainers = [ lib.maintainers.cmm ];
