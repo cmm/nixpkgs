@@ -10,7 +10,9 @@ let
 
   inherit (builtins)
     concatStringsSep
+    filter
     map
+    match
     toString
     attrNames
     ;
@@ -19,6 +21,7 @@ let
     types
     mkOption
     literalExpression
+    pipe
     optional
     mkIf
     mkMerge
@@ -136,7 +139,7 @@ let
       ++ (optional (a.nice != null) "nice=${toString a.nice}")
       ++ (optional (a.class != null) "sched=${prioToString a.class a.prio}")
       ++ (optional (a.ioClass != null) "io=${prioToString a.ioClass a.ioPrio}")
-      ++ (optional ((builtins.length a.matchers) != 0)
+      ++ (optional (builtins.length a.matchers != 0)
         "{\n${concatStringsSep "\n" (map (m: "  ${indent}${m}") a.matchers)}\n${indent}}"
       )
     );
@@ -301,6 +304,14 @@ in
         ExecStart = "${cfg.package}/bin/system76-scheduler daemon";
         ExecReload = "${cfg.package}/bin/system76-scheduler daemon reload";
       };
+      # should ideally use reloadTriggers instead, but reloading is
+      # not enough to cause the right thing to happen when a
+      # "submodule" is toggled (Pipewire boosting or exesnoop)
+      restartTriggers = pipe config.environment.etc [
+        attrNames
+        (filter (path: match "^system76-scheduler/.*" path != null))
+        (map (path: config.environment.etc.${path}.source))
+      ];
     };
 
     environment.etc = mkMerge [
