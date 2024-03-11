@@ -1,21 +1,31 @@
 { lib
 , stdenvNoCC
-, fetchzip
+, fetchFromGitHub
 , runtimeShell
 , bashInteractive
 , glibcLocales
+, gitMinimal
 }:
 
 stdenvNoCC.mkDerivation rec {
   pname = "blesh";
-  version = "0.4.0-devel3";
+  version = "unstable-2024-03-11";
 
-  src = fetchzip {
-    url = "https://github.com/akinomyoga/ble.sh/releases/download/v${version}/ble-${version}.tar.xz";
-    sha256 = "sha256-kGLp8RaInYSrJEi3h5kWEOMAbZV/gEPFUjOLgBuMhCI=";
+  src = fetchFromGitHub {
+    owner = "akinomyoga";
+    repo = "ble.sh";
+    rev = "b6344b3be1978695889371de83ac4d15352e4fee";
+    fetchSubmodules = true;
+    leaveDotGit = true;
+    sha256 = "sha256-mKqvbwLW71NBeuP5Cqsp/dmrbodzAmFI3HYN5v07cNg=";
   };
 
+  patches = [
+    ./no-git-submodule-update.patch
+  ];
+
   dontBuild = true;
+  nativeBuildInputs = [ gitMinimal ];
 
   doCheck = true;
   nativeCheckInputs = [ bashInteractive glibcLocales ];
@@ -35,7 +45,8 @@ stdenvNoCC.mkDerivation rec {
     }
     EOF
 
-    cp -rv $src/* $out/share/blesh
+    make install PREFIX=$out
+    #cp -rv $src/* $out/share/blesh
 
     runHook postInstall
   '';
