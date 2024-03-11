@@ -1,0 +1,13 @@
+diff --git i/GNUmakefile w/GNUmakefile
+index af1c14b6..71299c62 100644
+--- i/GNUmakefile
++++ w/GNUmakefile
+@@ -184,7 +184,7 @@ $(OUTDIR)/doc/%: docs/% | $(OUTDIR)/doc
+ 
+ .PHONY: update-contrib
+ update-contrib contrib/contrib.mk:
+-	git submodule update --init --recursive
++	@echo not running: git submodule update --init --recursive
+ 
+ include contrib/contrib.mk
+ 
