@@ -11,6 +11,7 @@ let
     ${optionalString cfg.systemScheduler "schedules: no"}
 '';
   configFile = "${toString cfg.homeDir}/flexget.yml";
+  lockFileWildcard = "${toString cfg.homeDir}/.*-lock";
 in {
   options = {
     services.flexget = {
@@ -64,7 +65,7 @@ in {
         path = [ pkg ];
         serviceConfig = {
           User = cfg.user;
-          ExecStartPre = "${pkgs.coreutils}/bin/install -m644 ${ymlFile} ${configFile}";
+          ExecStartPre = ''${pkgs.bash}/bin/bash -c "rm -f ${lockFileWildcard} && ${pkgs.coreutils}/bin/install -m644 ${ymlFile} ${configFile}"'';
           ExecStart = "${pkg}/bin/flexget -c ${configFile} daemon start";
           ExecStop = "${pkg}/bin/flexget -c ${configFile} daemon stop";
           ExecReload = "${pkg}/bin/flexget -c ${configFile} daemon reload";
