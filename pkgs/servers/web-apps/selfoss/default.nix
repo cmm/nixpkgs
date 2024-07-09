@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, fetchurl, unzip }:
+{ lib, stdenvNoCC, fetchurl, fetchpatch, unzip }:
 
 stdenvNoCC.mkDerivation rec {
   pname = "selfoss";
@@ -7,6 +7,12 @@ stdenvNoCC.mkDerivation rec {
   src = fetchurl {
     url = "https://github.com/SSilence/selfoss/releases/download/${version}/selfoss-${version}.zip";
     sha256 = "5JxHUOlyMneWPKaZtgLwn5FI4rnyWPzmsUQpSYrw5Pw=";
+  };
+
+  patches = fetchpatch {
+    name = "any-auth";
+    url = "https://github.com/cmm/selfoss/commit/28c5605e89182af6526a3ee53a7956502ddb865d.patch";
+    hash = "sha256-Oh2jhIyCYecDdqcq/f0y5yG/UIJoj1olDJY/IiQ+Mu4=";
   };
 
   nativeBuildInputs = [
