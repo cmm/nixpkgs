@@ -1,0 +1,27 @@
+diff --git i/CMakePresets.json w/CMakePresets.json
+index e6d3f6e7..05107ac2 100644
+--- i/CMakePresets.json
++++ w/CMakePresets.json
+@@ -58,6 +58,10 @@
+       "cacheVariables": {
+         "AMDGPU_TARGETS": "gfx900;gfx940;gfx941;gfx942;gfx1010;gfx1012;gfx1030;gfx1100;gfx1101;gfx1102"
+       }
++    },
++    {
++      "name": "Vulkan",
++      "inherits": [ "Default" ]
+     }
+   ],
+   "buildPresets": [
+@@ -105,6 +109,11 @@
+       "name": "ROCm 6",
+       "inherits": [ "ROCm" ],
+       "configurePreset": "ROCm 6"
++    },
++    {
++      "name": "Vulkan",
++      "configurePreset": "Vulkan",
++      "targets": [ "ggml-cpu", "ggml-vulkan" ]
+     }
+   ]
+ }

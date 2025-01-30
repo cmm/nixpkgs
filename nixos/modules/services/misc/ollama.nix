@@ -103,6 +103,7 @@ in
             false
             "rocm"
             "cuda"
+            "vulkan"
           ]
         );
         default = null;
@@ -119,6 +120,8 @@ in
             - may require overriding gpu type with `services.ollama.rocmOverrideGfx`
               if rocm doesn't detect your AMD gpu
           - `"cuda"`: supported by most modern NVIDIA GPUs
+          - `"vulkan"`: generic acceleration framework,
+              works with Intel GPUs and NPUs also
         '';
       };
       rocmOverrideGfx = lib.mkOption {
@@ -204,16 +207,47 @@ in
         }
         // {
           Type = "exec";
-          DynamicUser = true;
           ExecStart = "${lib.getExe ollamaPackage} serve";
           WorkingDirectory = cfg.home;
           StateDirectory = [ "ollama" ];
-          ReadWritePaths = [
-            cfg.home
-            cfg.models
-          ];
 
-          CapabilityBoundingSet = [ "" ];
+          # for GPU acceleration
+          PrivateDevices = false;
+
+          # hardening
+          DynamicUser = true;
+          CapabilityBoundingSet = lib.optionalString (cfg.acceleration == "vulkan") "CAP_PERFMON";
+          RestrictAddressFamilies = [
+            "AF_INET"
+            "AF_INET6"
+            "AF_UNIX"
+          ];
+          NoNewPrivileges = true;
+          PrivateMounts = true;
+          PrivateTmp = true;
+          PrivateUsers = true;
+          ProtectClock = true;
+          ProtectControlGroups = true;
+          ProtectHome = true;
+          ProtectKernelLogs = true;
+          ProtectKernelModules = true;
+          ProtectKernelTunables = true;
+          ProtectSystem = "strict";
+          MemoryDenyWriteExecute = true;
+          LockPersonality = true;
+          RemoveIPC = true;
+          RestrictNamespaces = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+          SystemCallArchitectures = "native";
+          SystemCallFilter = [
+            "@system-service @resources"
+            "~@privileged"
+          ];
+          SystemCallErrorNumber = "EPERM";
+          ProtectProc = "invisible";
+          ProtectHostname = true;
+
           DeviceAllow = [
             # CUDA
             # https://docs.nvidia.com/dgx/pdf/dgx-os-5-user-guide.pdf
@@ -224,41 +258,17 @@ in
             # ROCm
             "char-drm"
             "char-kfd"
+            # Vulkan
+            "dri"
             # WSL (Windows Subsystem for Linux)
             "/dev/dxg"
           ];
-          DevicePolicy = "closed";
-          LockPersonality = true;
-          MemoryDenyWriteExecute = true;
-          NoNewPrivileges = true;
-          PrivateDevices = false; # hides acceleration devices
-          PrivateTmp = true;
-          PrivateUsers = true;
+          BindPaths = [
+            cfg.home
+            cfg.models
+          ];
           ProcSubset = "all"; # /proc/meminfo
-          ProtectClock = true;
-          ProtectControlGroups = true;
-          ProtectHome = true;
-          ProtectHostname = true;
-          ProtectKernelLogs = true;
-          ProtectKernelModules = true;
-          ProtectKernelTunables = true;
-          ProtectProc = "invisible";
-          ProtectSystem = "strict";
-          RemoveIPC = true;
-          RestrictNamespaces = true;
-          RestrictRealtime = true;
-          RestrictSUIDSGID = true;
-          RestrictAddressFamilies = [
-            "AF_INET"
-            "AF_INET6"
-            "AF_UNIX"
-          ];
           SupplementaryGroups = [ "render" ]; # for rocm to access /dev/dri/renderD* devices
-          SystemCallArchitectures = "native";
-          SystemCallFilter = [
-            "@system-service @resources"
-            "~@privileged"
-          ];
           UMask = "0077";
         };
     };
