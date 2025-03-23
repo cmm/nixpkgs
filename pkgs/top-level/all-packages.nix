@@ -2765,6 +2765,8 @@ with pkgs;
 
   xmlsort = perlPackages.XMLFilterSort;
 
+  xmltv = callPackage ../by-name/xm/xmltv/package.nix { };
+
   mcelog = callPackage ../os-specific/linux/mcelog {
     util-linux = util-linuxMinimal;
   };
