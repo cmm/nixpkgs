@@ -12164,6 +12164,21 @@ with self; {
     };
   };
 
+  HTTPCacheTransparent = buildPerlPackage {
+    pname = "HTTP-Cache-Transparent";
+    version = "1.4";
+    src = fetchurl {
+      url = "mirror://cpan//authors/id/M/MA/MATTIASH/HTTP-Cache-Transparent-1.4.tar.gz";
+      hash = "sha256-ZiLhteWvlSsXEa6iR73LG5HCqsDxHzL4GaLQfhHdKEU=";
+    };
+    doCheck = false;
+    propagatedBuildInputs = [ LWP ];
+    meta = {
+      description = "Cache the result of http get-requests persistently";
+      license = with lib.licenses; [ artistic2 ];
+    };
+  };
+
   HTTPCookieJar = buildPerlPackage {
     pname = "HTTP-CookieJar";
     version = "0.014";
@@ -13914,6 +13929,19 @@ with self; {
     };
   };
 
+  LinguaPreferred = buildPerlPackage {
+    pname = "Lingua-Preferred";
+    version = "0.2.1";
+    src = fetchurl {
+      url = "mirror://cpan/authors/id/E/ED/EDAVIS/Lingua-Preferred-0.2.4.tar.gz";
+      hash = "sha256-+ljE+sa2dveMqta0cqeF3QyPpnAEpiKU+8+jo+skPIM=";
+    };
+    meta = {
+      description = "Perl extension to choose a language";
+      license = with lib.licenses; [ artistic1 gpl2Plus ];
+    };
+  };
+
   LinguaPTStemmer = buildPerlPackage {
     pname = "Lingua-PT-Stemmer";
     version = "0.02";
@@ -14617,6 +14645,20 @@ with self; {
     };
   };
 
+  LogTraceMessages = buildPerlPackage {
+    pname = "Log-TraceMessages";
+    version = "1.4";
+    src = fetchurl {
+      url = "mirror://cpan/authors/id/E/ED/EDAVIS/Log-TraceMessages-1.4.tar.gz";
+      hash = "sha256-NDq0fB1pIA3203vB3QEnEy5vCkabd+5rceyhFGzmz48=";
+    };
+    doCheck = false;
+    meta = {
+      description = "Perl extension for trace messages used in debugging";
+      license = with lib.licenses; [ artistic1 ];
+    };
+  };
+
   MCE = buildPerlPackage {
     pname = "MCE";
     version = "1.889";
@@ -14759,6 +14801,21 @@ with self; {
     meta = {
       description = "Generate signed OAuth requests";
       license = with lib.licenses; [ artistic1 gpl1Plus ];
+    };
+  };
+
+  LWPJSONTiny = buildPerlPackage {
+    pname = "LWP-JSON-Tiny";
+    version = "0.014";
+    src = fetchurl {
+      url = "mirror://cpan/authors/id/S/SK/SKINGTON/LWP-JSON-Tiny-0.014.tar.gz";
+      hash = "sha256-5O16U58pZJA6INwSSevGHuovxP3NY1BNKUNkHB1ARKw=";
+    };
+    buildInputs = [ TestFatal JSONMaybeXS ];
+    propagatedBuildInputs = [ LWP ];
+    meta = {
+      description = "use JSON natively with LWP objects";
+      license = with lib.licenses; [ artistic2 ];
     };
   };
 
@@ -28042,6 +28099,20 @@ with self; {
       description = "Database URIs";
       homepage = "https://search.cpan.org/dist/URI-db";
       license = with lib.licenses; [ artistic1 gpl1Plus ];
+    };
+  };
+
+  URIEncode = buildPerlModule {
+    pname = "URI-Encode";
+    version = "v1.1.1";
+    src = fetchurl {
+      url = "mirror://cpan/authors/id/M/MI/MITHUN/URI-Encode-v1.1.1.tar.gz";
+      hash = "sha256-S7nOTnAWwBOM+cI3VQhZUobvocjcFbRbqkxHKBwIJDs=";
+    };
+    propagatedBuildInputs = [ Encode ];
+    meta = {
+      description = "Simple percent Encoding/Decoding";
+      license = with lib.licenses; [ artistic1 ];
     };
   };
 
