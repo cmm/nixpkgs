@@ -55,6 +55,8 @@ in
   };
 
   config = mkIf cfg.enable {
+    environment.etc."readeck/config.toml".source = configFile;
+
     systemd.services.readeck = {
       description = "Readeck";
       after = [ "network-online.target" ];
@@ -66,9 +68,7 @@ in
         WorkingDirectory = "/var/lib/readeck";
         EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
         DynamicUser = true;
-        # readeck opens config.toml as writable in case it needs to add a secret key...
-        ExecStartPre = "${lib.getExe' pkgs.coreutils "cp"} --no-preserve=all ${configFile} config.toml";
-        ExecStart = "${lib.getExe cfg.package} serve -config config.toml";
+        ExecStart = "${lib.getExe cfg.package} serve -config /etc/readeck/config.toml";
         ProtectSystem = "full";
         SystemCallArchitectures = "native";
         MemoryDenyWriteExecute = true;
