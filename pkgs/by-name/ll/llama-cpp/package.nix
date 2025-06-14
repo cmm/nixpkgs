@@ -101,6 +101,8 @@ effectiveStdenv.mkDerivation (finalAttrs: {
     substituteInPlace ./scripts/build-info.sh \
       --replace-fail 'build_number="0"' 'build_number="${finalAttrs.version}"' \
       --replace-fail 'build_commit="unknown"' "build_commit=\"$(cat COMMIT)\""
+
+    sed -i '/DCMAKE_RUNTIME_OUTPUT_DIRECTORY/d' ggml/src/ggml-vulkan/CMakeLists.txt
   '';
 
   nativeBuildInputs =
