@@ -23,6 +23,7 @@ stdenv.mkDerivation (finalAttrs: {
   '';
 
   nativeBuildInputs = [ cmake ];
+  cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
 
   doCheck = true;
 
