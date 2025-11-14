@@ -1,8 +1,6 @@
 {
   lib,
   fetchFromGitHub,
-  fetchpatch,
-  mkDerivation,
   stdenv,
   SDL2,
   cmake,
@@ -15,36 +13,30 @@
   pkg-config,
   python3,
   qtbase,
+  qt5compat,
+  qtdeclarative,
+  qtpositioning,
   qtwayland,
   qtwebchannel,
   qtwebengine,
-  qtx11extras,
-  jellyfin-web,
+  wrapQtAppsHook,
   withDbus ? stdenv.hostPlatform.isLinux,
 }:
 
-mkDerivation rec {
+stdenv.mkDerivation rec {
   pname = "jellyfin-media-player";
-  version = "1.12.0";
+  version = "1.12.0-unstable-2025-10-29";
 
   src = fetchFromGitHub {
     owner = "jellyfin";
     repo = "jellyfin-media-player";
-    rev = "v${version}";
-    sha256 = "sha256-IXinyenadnW+a+anQ9e61h+N8vG2r77JPboHm5dN4Iw=";
+    rev = "67d1298b4c2e4d302bb9f818dd48f1794b4a3aac";
+    sha256 = "sha256-SO4Iyao6Ivdj6QWrUlTVQYPed5/8F30zZlPzX9jPqRE=";
   };
 
   patches = [
-    # fix the location of the jellyfin-web path
-    ./fix-web-path.patch
     # disable update notifications since the end user can't simply download the release artifacts to update
     ./disable-update-notifications.patch
-
-    # cmake 4 compatibility
-    (fetchpatch {
-      url = "https://github.com/jellyfin/jellyfin-media-player/commit/6c5c603a1db489872832ed560581d98fdee89d6f.patch";
-      hash = "sha256-Blq7y7kOygbZ6uKxPJl9aDXJWqhE0jnM5GNEAwyQEA0=";
-    })
   ];
 
   buildInputs = [
@@ -55,9 +47,11 @@ mkDerivation rec {
     libvdpau
     mpv
     qtbase
+    qt5compat
+    qtdeclarative
+    qtpositioning
     qtwebchannel
     qtwebengine
-    qtx11extras
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [
     qtwayland
@@ -68,6 +62,9 @@ mkDerivation rec {
     ninja
     pkg-config
     python3
+  ]
+  ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [
+    wrapQtAppsHook
   ];
 
   cmakeFlags = [
@@ -76,17 +73,73 @@ mkDerivation rec {
   ]
   ++ lib.optionals (!withDbus) [
     "-DLINUX_X11POWER=ON"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # Prevent CMake from deploying Qt frameworks into the app bundle
+    "-DQT_DEPLOY_SUPPORT=OFF"
+    "-DCMAKE_SKIP_INSTALL_RPATH=ON"
   ];
 
-  preConfigure = ''
-    # link the jellyfin-web files to be copied by cmake (see fix-web-path.patch)
-    ln -s ${jellyfin-web}/share/jellyfin-web .
-  '';
+  # On Darwin, we handle Qt environment setup manually to avoid broken library wrapping
+  dontWrapQtApps = stdenv.hostPlatform.isDarwin;
 
   postInstall = lib.optionalString stdenv.hostPlatform.isDarwin ''
     mkdir -p $out/bin $out/Applications
     mv "$out/Jellyfin Media Player.app" $out/Applications
-    ln -s "$out/Applications/Jellyfin Media Player.app/Contents/MacOS/Jellyfin Media Player" $out/bin/jellyfinmediaplayer
+
+    # Remove any Qt frameworks that were copied into the bundle
+    # We want to use Qt from the Nix store instead
+    rm -rf "$out/Applications/Jellyfin Media Player.app/Contents/Frameworks/Qt"*.framework || true
+
+    # Create a wrapper script that sets Qt environment variables
+    cat > "$out/bin/jellyfinmediaplayer" << 'EOF'
+    #!/bin/sh
+    export QT_PLUGIN_PATH="${qtbase}/${qtbase.qtPluginPrefix}:${qtwebengine}/${qtbase.qtPluginPrefix}"
+    export QT_QPA_PLATFORM_PLUGIN_PATH="${qtbase}/${qtbase.qtPluginPrefix}/platforms"
+    export QML2_IMPORT_PATH="${qtbase}/${qtbase.qtQmlPrefix}:${qtdeclarative}/${qtbase.qtQmlPrefix}:${qtwebchannel}/${qtbase.qtQmlPrefix}:${qtwebengine}/${qtbase.qtQmlPrefix}"
+    export QTWEBENGINE_RESOURCES_PATH="${qtwebengine}/lib/QtWebEngineCore.framework/Versions/A/Resources"
+    export QTWEBENGINEPROCESS_PATH="${qtwebengine}/lib/QtWebEngineCore.framework/Versions/A/Helpers/QtWebEngineProcess.app/Contents/MacOS/QtWebEngineProcess"
+    exec "$out/Applications/Jellyfin Media Player.app/Contents/MacOS/Jellyfin Media Player" "$@"
+    EOF
+
+    # Substitute the actual paths
+    substituteInPlace "$out/bin/jellyfinmediaplayer" \
+      --replace-fail '$out' "$out" \
+      --replace-fail '${qtbase}' "${qtbase}" \
+      --replace-fail '${qtdeclarative}' "${qtdeclarative}" \
+      --replace-fail '${qtwebchannel}' "${qtwebchannel}" \
+      --replace-fail '${qtwebengine}' "${qtwebengine}"
+
+    chmod +x "$out/bin/jellyfinmediaplayer"
+  '';
+
+  postFixup = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    # Fix all Qt framework references to point to Nix store instead of app bundle
+    binary="$out/Applications/Jellyfin Media Player.app/Contents/MacOS/Jellyfin Media Player"
+
+    # Change Qt framework paths from @executable_path to Nix store
+    for framework in QtCore QtGui QtWidgets QtNetwork QtQml QtQuick QtWebChannel QtWebEngineCore QtWebEngineQuick QtCore5Compat QtOpenGL QtPositioning QtQmlModels QtQmlWorkerScript QtWebChannelQuick QtDBus QtXml QtQmlMeta; do
+      old_path="@executable_path/../Frameworks/$framework.framework/Versions/A/$framework"
+      # Find the framework in our dependencies
+      if [ "$framework" = "QtCore5Compat" ]; then
+        new_path="${qt5compat}/lib/$framework.framework/Versions/A/$framework"
+      elif [ "$framework" = "QtWebEngineCore" ] || [ "$framework" = "QtWebEngineQuick" ]; then
+        new_path="${qtwebengine}/lib/$framework.framework/Versions/A/$framework"
+      elif [ "$framework" = "QtWebChannel" ] || [ "$framework" = "QtWebChannelQuick" ]; then
+        new_path="${qtwebchannel}/lib/$framework.framework/Versions/A/$framework"
+      elif [ "$framework" = "QtQml" ] || [ "$framework" = "QtQuick" ] || [ "$framework" = "QtQmlModels" ] || [ "$framework" = "QtQmlWorkerScript" ] || [ "$framework" = "QtQmlMeta" ]; then
+        new_path="${qtdeclarative}/lib/$framework.framework/Versions/A/$framework"
+      elif [ "$framework" = "QtPositioning" ]; then
+        new_path="${qtpositioning}/lib/$framework.framework/Versions/A/$framework"
+      else
+        new_path="${qtbase}/lib/$framework.framework/Versions/A/$framework"
+      fi
+
+      # Only change if the framework exists in the target
+      if [ -f "$new_path" ]; then
+        install_name_tool -change "$old_path" "$new_path" "$binary" 2>/dev/null || true
+      fi
+    done
   '';
 
   meta = with lib; {
