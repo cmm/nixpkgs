@@ -6,13 +6,13 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "nirius";
-  version = "0.6.1";
+  version = "unstable-20251125";
 
   src = fetchFromSourcehut {
     owner = "~tsdh";
     repo = "nirius";
-    rev = "nirius-${version}";
-    hash = "sha256-KAh45AcNB9Y4ahxamtI6/z3l1xg6yf17h4rnZl3w89I=";
+    rev = "165e3d8b12660d5d8aac8a2b37e034fa1c403d83";
+    hash = "sha256-Nz+7wVTt6i2owtQ1vWRtU5FtfZMMsn4l98zOrKkk8eM=";
   };
 
   cargoHash = "sha256-p123QvlB/j0b5kFjICcTI/5ZKL8pzGfIvH80doAhqFA=";
