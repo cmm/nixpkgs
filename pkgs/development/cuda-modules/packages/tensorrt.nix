@@ -1,10 +1,12 @@
 {
   _cuda,
+  autoreconfHook,
   backendStdenv,
   buildRedist,
   cuda_cudart,
   cudaAtLeast,
   cudaMajorMinorVersion,
+  fetchpatch,
   lib,
   libcudla, # only for Jetson
   patchelf,
@@ -13,6 +15,19 @@ let
   inherit (backendStdenv) cudaCapabilities hasJetsonCudaCapability hostRedistSystem;
   inherit (lib.lists) optionals;
   inherit (lib.strings) concatStringsSep optionalString;
+
+  # TensorRT executables need repeated ELF header rewrites without overlapping LOAD mappings.
+  # https://github.com/NixOS/patchelf/pull/672
+  patchelfFixed = patchelf.overrideAttrs (old: {
+    nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ autoreconfHook ];
+    patches = (old.patches or [ ]) ++ [
+      (fetchpatch {
+        name = "patchelf-executable-header-rewrite.patch";
+        url = "https://github.com/NixOS/patchelf/compare/382d8bc12db9e720515da49d9c272ef4a622c3c0...59acc3d98b4961cfddf02090d9426ac735603218.diff";
+        hash = "sha256-MgJft8jCQ8TsOtXyTtuZuAVw1y5PFkqDapdLSTUAUeY=";
+      })
+    ];
+  });
 in
 buildRedist (
   finalAttrs:
@@ -53,7 +68,7 @@ buildRedist (
 
     allowFHSReferences = true;
 
-    nativeBuildInputs = [ patchelf ];
+    nativeBuildInputs = [ patchelfFixed ];
 
     buildInputs = [
       cuda_cudart
