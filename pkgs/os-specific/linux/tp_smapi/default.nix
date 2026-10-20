@@ -3,6 +3,7 @@
   lib,
   fetchFromGitHub,
   kernel,
+  kernelModuleMakeFlags,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -32,20 +33,29 @@ stdenv.mkDerivation (finalAttrs: {
 
   hardeningDisable = [ "pic" ];
 
-  makeFlags = [
+  makeFlags = kernelModuleMakeFlags ++ [
     "KBASE=${kernel.dev}/lib/modules/${kernel.modDirVersion}"
     "SHELL=${stdenv.shell}"
     "HDAPS=1"
+    "INSTALL_MOD_PATH=${placeholder "out"}"
+    "INSTALL_MOD_DIR=kernel/drivers/firmware"
+    "DEPMOD=true"
   ];
 
-  installPhase = ''
-    runHook preInstall
+  # The upstream install target requires root and removes existing modules.
+  installTargets = [ "modules_install" ];
 
-    install -v -D -m 644 thinkpad_ec.ko "$out/lib/modules/${kernel.modDirVersion}/kernel/drivers/firmware/thinkpad_ec.ko"
-    install -v -D -m 644 tp_smapi.ko "$out/lib/modules/${kernel.modDirVersion}/kernel/drivers/firmware/tp_smapi.ko"
-    install -v -D -m 644 hdaps.ko "$out/lib/modules/${kernel.modDirVersion}/kernel/drivers/firmware/hdapsd.ko"
+  installFlags = [
+    "-C"
+    "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+    "M=$(PWD)"
+  ];
 
-    runHook postInstall
+  postInstall = ''
+    # Keep the distinct hdapsd filename, including its compression suffix and certificate.
+    for module in "$out/lib/modules/${kernel.modDirVersion}/kernel/drivers/firmware/hdaps.ko"*; do
+      mv "$module" "''${module/hdaps.ko/hdapsd.ko}"
+    done
   '';
 
   dontStrip = true;
