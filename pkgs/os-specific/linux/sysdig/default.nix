@@ -4,6 +4,8 @@
   fetchFromGitHub,
   cmake,
   kernel,
+  kernelModuleMakeFlags ? [ ],
+  removeReferencesTo,
   installShellFiles,
   pkg-config,
   luajit,
@@ -67,7 +69,8 @@ stdenv.mkDerivation {
     perl
     installShellFiles
     pkg-config
-  ];
+  ]
+  ++ lib.optional (kernel != null) removeReferencesTo;
   buildInputs = [
     luajit
     ncurses
@@ -148,7 +151,6 @@ stdenv.mkDerivation {
     cmakeFlagsArray+=(-DCMAKE_EXE_LINKER_FLAGS="-ltbb -lcurl -lzstd -labsl_synchronization")
   ''
   + lib.optionalString (kernel != null) ''
-    export INSTALL_MOD_PATH="$out"
     export KERNELDIR="${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
   '';
 
@@ -161,21 +163,12 @@ stdenv.mkDerivation {
       rmdir $out/etc
     ''
     + lib.optionalString (kernel != null) ''
-      make install_driver
-      kernel_dev=${kernel.dev}
-      kernel_dev=''${kernel_dev#${builtins.storeDir}/}
-      kernel_dev=''${kernel_dev%%-linux*dev*}
-      if test -f "$out/lib/modules/${kernel.modDirVersion}/extra/scap.ko"; then
-          sed -i "s#$kernel_dev#................................#g" $out/lib/modules/${kernel.modDirVersion}/extra/scap.ko
-      else
-          for i in $out/lib/modules/${kernel.modDirVersion}/{extra,updates}/scap.ko.xz; do
-            if test -f "$i"; then
-              xz -d $i
-              sed -i "s#$kernel_dev#................................#g" ''${i%.xz}
-              xz -9 ''${i%.xz}
-            fi
-          done
-      fi
+      # Remove the reference before modules_install signs and compresses the module.
+      # Bypass install_driver, whose build dependency could recreate scap.ko.
+      remove-references-to -t ${kernel.dev} driver/src/scap.ko
+      make -C "$KERNELDIR" M="$PWD/driver/src" \
+        ${lib.escapeShellArgs kernelModuleMakeFlags} \
+        INSTALL_MOD_PATH="$out" DEPMOD=true modules_install
     '';
 
   meta = {
